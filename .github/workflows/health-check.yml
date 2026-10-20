@@ -1,7 +1,8 @@
-name: Render health check
+name: Render keepalive
 
 on:
   schedule:
+    # GitHub-hosted schedules are best effort and can be delayed.
     - cron: "*/10 * * * *"
   workflow_dispatch:
 
@@ -9,37 +10,40 @@ permissions:
   contents: write
 
 concurrency:
-  group: render-health-check
+  group: render-keepalive
   cancel-in-progress: false
 
 jobs:
-  check:
+  keepalive:
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 3
     steps:
       - name: Check out main branch
+        id: checkout
         uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
 
-      - name: Prepare persistent history
+      - name: Restore previous history
         run: |
           mkdir -p "$RUNNER_TEMP/monitor-data"
           if curl --fail --silent --show-error --location \
             https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/monitor-data/history.json \
             -o "$RUNNER_TEMP/monitor-data/history.json"; then
-            echo "Loaded previous history"
+            echo "Restored prior health-check history."
           else
-            echo "No previous history found; starting fresh"
+            echo "No saved history found; starting a new history file."
           fi
 
-      - name: Run health check
+      - name: Ping Render endpoint
+        id: probe
         env:
-          RENDER_URL: ${{ secrets.RENDER_URL || 'https://nepal-vegetation-lag-api.onrender.com/' }}
-        run: python3 scripts/check_render.py --output-dir "$RUNNER_TEMP/monitor-data"
+          RENDER_URL: ${{ secrets.RENDER_URL }}
+        run: python3 scripts/check_render.py --output-dir "$RUNNER_TEMP/monitor-data" --timeout 20 --retries 3 --retry-delay 2 --max-history 100
 
-      - name: Publish monitoring data to monitor-data branch
+      - name: Publish status and history
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -55,8 +59,12 @@ jobs:
             git rm -rf . >/dev/null 2>&1 || true
           fi
 
-          cp "$RUNNER_TEMP/monitor-data/status.json" ./status.json
-          cp "$RUNNER_TEMP/monitor-data/history.json" ./history.json
-          git add status.json history.json
-          git commit -m "Update Render health-check results" || echo "No changes to publish"
-          git push origin monitor-data
+          if [ -f "$RUNNER_TEMP/monitor-data/status.json" ] && [ -f "$RUNNER_TEMP/monitor-data/history.json" ]; then
+            cp "$RUNNER_TEMP/monitor-data/status.json" ./status.json
+            cp "$RUNNER_TEMP/monitor-data/history.json" ./history.json
+            git add status.json history.json
+            git commit -m "Record Render health check" || echo "No new status to commit."
+            git push origin monitor-data
+          else
+            echo "Health-check output files were not created; nothing to publish."
+          fi
