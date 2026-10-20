@@ -1,64 +1,87 @@
 #!/usr/bin/env python3
 """Run due HTTP checks from Supabase. Uses only Python's standard library."""
-import json, os, socket, time, ipaddress
+import ipaddress
+import json
+import os
+import socket
+import time
 from datetime import datetime, timezone
-from urllib.error import HTTPError, URLError
+from urllib.error import HTTPError
 from urllib.parse import urlparse
-from urllib.request import HTTPRedirectHandler, Request, build_opener\n\nclass NoRedirect(HTTPRedirectHandler):\n    """Never follow user-controlled redirects to avoid redirect-based SSRF."""\n    def redirect_request(self, req, fp, code, msg, headers, newurl):\n        return None\n\nSAFE_OPENER = build_opener(NoRedirect())
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
+class NoRedirect(HTTPRedirectHandler):
+    """Do not follow target redirects; this limits redirect-based SSRF."""
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+SAFE_OPENER = build_opener(NoRedirect())
 API = os.environ.get("SUPABASE_URL", "").rstrip("/")
 KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
-MAX_CHECKS = int(os.environ.get("MAX_CHECKS_PER_RUN", "50"))
+MAX_CHECKS = max(1, min(int(os.environ.get("MAX_CHECKS_PER_RUN", "50")), 200))
 
 def headers(prefer=None):
-    h = {"apikey": KEY, "Authorization": f"Bearer {KEY}", "Content-Type": "application/json"}
-    if prefer: h["Prefer"] = prefer
-    return h
+    result = {"apikey": KEY, "Authorization": f"Bearer {KEY}", "Content-Type": "application/json"}
+    if prefer:
+        result["Prefer"] = prefer
+    return result
 
 def request_json(url, method="GET", data=None, extra_headers=None, timeout=15):
-    h = headers()
-    if extra_headers: h.update(extra_headers)
+    request_headers = headers()
+    if extra_headers:
+        request_headers.update(extra_headers)
     payload = json.dumps(data).encode() if data is not None else None
-    req = Request(url, data=payload, headers=h, method=method)
+    req = Request(url, data=payload, headers=request_headers, method=method)
+    from urllib.request import urlopen
     with urlopen(req, timeout=timeout) as response:
         raw = response.read()
         return json.loads(raw) if raw else None
 
 def validate_public_url(value):
-    p = urlparse(value)
-    if p.scheme not in ("http", "https") or not p.hostname or p.username or p.password:
+    parsed = urlparse(value)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname or parsed.username or parsed.password:
         raise ValueError("Only public HTTP(S) URLs are allowed")
-    host = p.hostname.lower()
+    host = parsed.hostname.lower()
     if host in ("localhost", "metadata.google.internal") or host.endswith((".local", ".localhost", ".internal")):
         raise ValueError("Local host blocked")
-    for info in socket.getaddrinfo(host, p.port or (443 if p.scheme == "https" else 80), type=socket.SOCK_STREAM):
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    try:
+        addresses = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+    except OSError as exc:
+        raise ValueError("Could not resolve target hostname") from exc
+    if not addresses:
+        raise ValueError("Target hostname did not resolve")
+    for info in addresses:
         ip = ipaddress.ip_address(info[4][0])
         if not ip.is_global:
             raise ValueError("Private or non-global address blocked")
     return value
 
 def check(url):
-    start = time.monotonic()
+    started = time.monotonic()
     status_code, error = None, None
     try:
-        safe = validate_public_url(url)
-        req = Request(safe, headers={"User-Agent": "RenderMonitor/1.0", "Accept": "*/*"}, method="GET")
+        safe_url = validate_public_url(url)
+        req = Request(safe_url, headers={"User-Agent": "RenderMonitor/1.0", "Accept": "*/*"}, method="GET")
         try:
             with SAFE_OPENER.open(req, timeout=12) as response:
                 status_code = response.status
                 response.read(512)
         except HTTPError as exc:
+            # A 3xx response is measured without following its Location header.
             status_code = exc.code
             exc.read(512)
-        latency = round((time.monotonic() - start) * 1000)
+        latency = round((time.monotonic() - started) * 1000)
         return status_code, latency, status_code < 400, None if status_code < 400 else f"HTTP {status_code}"
     except Exception as exc:
-        return status_code, round((time.monotonic() - start) * 1000), False, str(exc)[:240]
+        return status_code, round((time.monotonic() - started) * 1000), False, str(exc)[:240]
 
 def main():
     if not API or not KEY:
         raise SystemExit("Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY secrets.")
-    due = request_json(f"{API}/rest/v1/monitors?select=id,user_id,url,interval_minutes,last_checked_at&is_active=eq.true&order=last_checked_at.asc.nullsfirst&limit={MAX_CHECKS}")
+    due = request_json(
+        f"{API}/rest/v1/monitors?select=id,user_id,url,interval_minutes,last_checked_at&is_active=eq.true&order=last_checked_at.asc.nullsfirst&limit={MAX_CHECKS}"
+    )
     now = datetime.now(timezone.utc)
     count = 0
     for monitor in due or []:
