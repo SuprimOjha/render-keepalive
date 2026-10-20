@@ -2,12 +2,34 @@
 
 An UptimeRobot-inspired MVP built with Next.js, Supabase, Python, and GitHub Actions.
 
-> **Reliability note:** GitHub Actions is a best-effort scheduler, not a real-time monitoring network. Runs may be delayed. Do not market this as guaranteed uptime.
+> **Reliability note:** GitHub Actions scheduling is best effort. Runs can be delayed or skipped, so this is a keepalive workaround—not guaranteed uptime or a real-time monitoring network.
 
-## 55 implemented project contributions
-1. Multi-monitor workspace; 2. email sign-up; 3. email sign-in; 4. sign-out; 5. user-scoped data; 6. Supabase RLS; 7. persistent monitor config; 8. create monitor; 9. edit monitor; 10. delete monitor; 11. pause monitor; 12. resume monitor; 13. configurable interval; 14. public HTTP/HTTPS validation; 15. URL test endpoint; 16. private IPv4 blocking; 17. localhost blocking; 18. private IPv6 basic blocking; 19. DNS checks before test requests; 20. request timeout; 21. HTTP status recording; 22. latency measurement; 23. scheduled worker; 24. due-time selection; 25. bounded checks per run; 26. persisted history; 27. latest status; 28. operational summary; 29. incident summary; 30. recent success-rate summary; 31. search by name/URL; 32. status filters; 33. paused filter; 34. selected monitor details; 35. response-time average; 36. recent success percentage; 37. check outcome bars; 38. activity feed; 39. CSV export; 40. responsive sidebar; 41. responsive table; 42. add modal; 43. edit modal; 44. URL test feedback; 45. loading states; 46. error notices; 47. empty states; 48. accessible form labels; 49. CI workflow; 50. Python tests; 51. environment template; 52. SQL schema/indexes; 53. deployment docs; 54. service-role key stays server-side; 55. scheduler concurrency protection.
+## Render keepalive bot
 
-## Setup
+The `Render keepalive` GitHub Actions workflow sends an HTTP GET request to your Render service every 10 minutes. It retries transient failures, records status/latency/attempts, and stores the latest status plus a rolling history on the `monitor-data` branch.
+
+1. Open **Settings → Secrets and variables → Actions** in this repository.
+2. Add a repository secret named `RENDER_URL`.
+3. Set its value to the exact public URL of your Render backend, ideally a lightweight health endpoint such as `https://your-service.onrender.com/health`. If your backend has no health route, use its base URL.
+4. Open **Actions → Render keepalive → Run workflow** to test it immediately.
+5. View each run's summary and the `status.json` / `history.json` files on the `monitor-data` branch.
+
+Do not add credentials or private tokens to the URL. The URL is stored as a GitHub secret, but the hostname can appear in the public status history if this repository is public.
+
+### Keepalive behavior
+
+- HTTP GET with a dedicated User-Agent and cache-bypass header.
+- 20-second timeout per attempt and up to 3 attempts.
+- 2xx and 3xx responses count as reachable; 4xx and 5xx responses count as unhealthy.
+- Network errors are retried with a short increasing delay.
+- Writes a concise GitHub Actions job summary for every run.
+- Saves the latest result and the last 100 checks.
+- Keeps the history branch separate from `main` so generated status files do not trigger the app's normal CI workflow.
+- Fails the workflow when the endpoint remains unhealthy, while still attempting to publish the recorded result.
+
+**Important:** Render Free services can sleep and take time to wake. A request every 10 minutes may help reduce sleeping, but GitHub Actions is not guaranteed to run exactly on schedule, and a successful response does not guarantee every application feature works.
+
+## Uptime monitoring dashboard
 
 ### 1. Supabase
 Create a project at https://supabase.com, then run `supabase/schema.sql` in SQL Editor.
@@ -31,9 +53,8 @@ Import the repo into Vercel and add the two `NEXT_PUBLIC_` variables. The databa
 Run `npm run test:python`, `npm run lint`, and `npm run build`. CI runs Python tests and a Next.js build.
 
 ## Production hardening
-This is an MVP. Before allowing untrusted users at scale, add DNS-rebinding-resistant egress controls, rate limits, abuse prevention, database-enforced monitor quotas, incident deduplication, notifications, scheduler fairness, data retention, and independent probes. The URL test endpoint has basic private-host checks but is not a complete production SSRF defense. A five-minute GitHub cron is a target, not a guarantee.
 
-The original single-URL `health-check.yml` workflow remains available; multi-monitor checks use `monitor-scheduler.yml`.
+This is an MVP. Before allowing untrusted users at scale, add DNS-rebinding-resistant egress controls, rate limits, abuse prevention, incident deduplication, notifications, scheduler fairness, data retention, and independent probes. The dashboard scheduler checks active user-configured monitors separately from the Render keepalive bot.
 
 ## License
 MIT
