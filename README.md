@@ -14,25 +14,45 @@ This project is built **for educational purposes**. It is my way of learning abo
 
 ## Project screenshots
 
-I’ll add screenshots here as the interface develops. If you fork the project, you can replace these placeholders with your own screenshots.
+<p align="center">
+  <strong>RenderMonitor — monitor your services at a glance</strong><br />
+  <em>A lightweight dashboard and GitHub Actions keepalive workflow.</em>
+</p>
 
-<!-- Screenshot 1: Main dashboard -->
-### Dashboard
+<p align="center">
+  <img
+    src="docs/dashboard.png.png"
+    alt="RenderMonitor main dashboard"
+    width="920"
+  />
+</p>
 
-<!-- Replace the placeholder below with an image path, for example: ![RenderMonitor dashboard](docs/images/dashboard.png) -->
-**[Insert dashboard screenshot here]**
+<p align="center">
+  <sub><strong>Main dashboard</strong> · View service status and monitoring activity in one place.</sub>
+</p>
 
-<!-- Screenshot 2: Add monitor dialog -->
-### Add a monitor
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/monitor.png.png" alt="RenderMonitor monitor configuration" width="100%" />
+      <br />
+      <strong>Monitor configuration</strong>
+      <br />
+      <sub>Set up and manage an endpoint to check.</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/result.png.png" alt="RenderMonitor keepalive workflow result" width="100%" />
+      <br />
+      <strong>Check results</strong>
+      <br />
+      <sub>Review the result of a keepalive run.</sub>
+    </td>
+  </tr>
+</table>
 
-<!-- Replace the placeholder below with an image path, for example: ![Add monitor dialog](docs/images/add-monitor.png) -->
-**[Insert add-monitor screenshot here]**
-
-<!-- Screenshot 3: GitHub Actions workflow result -->
-### Keepalive workflow result
-
-<!-- Replace the placeholder below with an image path, for example: ![GitHub Actions health check result](docs/images/workflow-result.png) -->
-**[Insert workflow result screenshot here]**
+<p align="center">
+  <sub>Screenshots from the project repository. Actual results depend on your configured endpoint and workflow run.</sub>
+</p>
 
 ---
 
