@@ -23,6 +23,17 @@ jobs:
           ref: main
           fetch-depth: 0
 
+      - name: Prepare persistent history
+        run: |
+          mkdir -p "$RUNNER_TEMP/monitor-data"
+          if curl --fail --silent --show-error --location \
+            https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/monitor-data/history.json \
+            -o "$RUNNER_TEMP/monitor-data/history.json"; then
+            echo "Loaded previous history"
+          else
+            echo "No previous history found; starting fresh"
+          fi
+
       - name: Run health check
         env:
           RENDER_URL: ${{ secrets.RENDER_URL }}
