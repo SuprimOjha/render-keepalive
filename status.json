@@ -1,8 +1,8 @@
 {
-  "checkedAt": "2026-10-20T09:49:19Z",
+  "checkedAt": "2026-10-20T09:59:21Z",
   "status": "online",
   "httpStatus": 200,
-  "latencyMs": 153,
+  "latencyMs": 94,
   "endpointHost": "nepal-vegetation-lag-api.onrender.com",
   "attempts": 1,
   "error": null
