@@ -44,3 +44,32 @@ create policy "Owners can read checks" on public.monitor_checks for select to au
 
 -- The scheduler uses SUPABASE_SERVICE_ROLE_KEY server-side to insert checks and update monitor status.
 -- Never expose the service-role key in NEXT_PUBLIC_* variables or commit it to Git.
+
+-- Enforce the MVP limit in the database (not just in the dashboard UI).
+create or replace function public.enforce_monitor_limit()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  active_count integer;
+begin
+  if new.is_active then
+    select count(*) into active_count
+      from public.monitors
+      where user_id = new.user_id
+        and is_active = true
+        and id is distinct from new.id;
+    if active_count >= 10 then
+      raise exception 'Free workspace limit reached: at most 10 active monitors per user.';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists monitor_limit_before_write on public.monitors;
+create trigger monitor_limit_before_write
+before insert or update of is_active, user_id on public.monitors
+for each row execute function public.enforce_monitor_limit();
