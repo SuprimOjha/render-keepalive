@@ -15,14 +15,20 @@ A Next.js dashboard and GitHub Actions workflow for scheduled health checks of R
 
 ## Setup
 
-### 1. Add your Render URL as a GitHub secret
+### 1. Target Render API
 
-In this repository, open **Settings → Secrets and variables → Actions → New repository secret**.
+The workflow is preconfigured to check:
+
+`https://nepal-vegetation-lag-api.onrender.com/`
+
+You do not need to add a secret to start checking this service. The workflow treats any HTTP response below 400 as a successful response; if the root path returns 404, configure `RENDER_URL` as a repository secret with the correct public health endpoint.
+
+To monitor a different URL or override the default, open **Settings → Secrets and variables → Actions → New repository secret**:
 
 - **Name:** `RENDER_URL`
-- **Value:** Your public health-check URL, for example `https://your-service.onrender.com/health`
+- **Value:** The full public health-check URL.
 
-Use a lightweight health endpoint that returns a successful HTTP status. If your app does not have one, you can use its public homepage, although a dedicated health endpoint is preferable. Do not put credentials or private tokens in the URL.
+Use a lightweight health endpoint that returns a successful HTTP status. Do not put credentials or private tokens in the URL.
 
 ### 2. Enable Actions write permission
 
