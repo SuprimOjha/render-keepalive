@@ -28,10 +28,14 @@ jobs:
       - name: Restore previous history
         run: |
           mkdir -p "$RUNNER_TEMP/monitor-data"
-          if curl --fail --silent --show-error --location \
-            https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/monitor-data/history.json \
-            -o "$RUNNER_TEMP/monitor-data/history.json"; then
-            echo "Restored prior health-check history."
+          if git ls-remote --exit-code --heads origin monitor-data >/dev/null 2>&1; then
+            git fetch origin monitor-data
+            if git cat-file -e origin/monitor-data:history.json 2>/dev/null; then
+              git show origin/monitor-data:history.json > "$RUNNER_TEMP/monitor-data/history.json"
+              echo "Restored prior health-check history."
+            else
+              echo "History branch exists but has no history file yet."
+            fi
           else
             echo "No saved history found; starting a new history file."
           fi
@@ -44,8 +48,6 @@ jobs:
 
       - name: Publish status and history
         if: ${{ always() && steps.checkout.outcome == 'success' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           set -e
           git config user.name "github-actions[bot]"
