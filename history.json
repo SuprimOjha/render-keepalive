@@ -1,6 +1,15 @@
 {
   "checks": [
     {
+      "checkedAt": "2026-10-20T09:41:29Z",
+      "status": "unconfigured",
+      "httpStatus": null,
+      "latencyMs": null,
+      "endpointHost": null,
+      "attempts": 0,
+      "error": "Missing RENDER_URL repository Actions secret."
+    },
+    {
       "checkedAt": "2026-10-20T09:38:17Z",
       "status": "unconfigured",
       "httpStatus": null,
