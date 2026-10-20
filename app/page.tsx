@@ -137,11 +137,12 @@ export default function Home() {
   if (!supabase) return <main className="setup-screen"><section className="setup-card">
     <div className="brand"><span className="brand-mark">R</span><span>Render<span className="brand-light">Monitor</span></span></div>
     <div className="eyebrow"><span className="eyebrow-dot" /> YOUR OWN UPTIME PLATFORM</div><h1>Your services.<br /><span>Under watch.</span></h1>
-    <p className="hero-copy">Connect Supabase to enable accounts, persistent monitors, and check history.</p>
+    <p className="hero-copy">Set up Supabase for the interactive dashboard, or fork the repository to run the keepalive bot for your own Render service.</p>
     <ol className="setup-steps"><li><b>1.</b><span>Create a free project at <a href="https://supabase.com" target="_blank" rel="noreferrer">Supabase</a>.</span></li>
-      <li><b>2.</b><span>Run <code>supabase/schema.sql</code> in its SQL Editor.</span></li><li><b>3.</b><span>Copy <code>.env.example</code> to <code>.env.local</code> and set the project URL and anon key.</span></li>
-      <li><b>4.</b><span>Add <code>SUPABASE_URL</code> and <code>SUPABASE_SERVICE_ROLE_KEY</code> as GitHub Actions secrets.</span></li></ol>
-    <a className="button button-primary setup-link" href="https://github.com/SuprimOjha/render-keepalive">Open repository ↗</a>
+      <li><b>2.</b><span>Run <code>supabase/schema.sql</code> in its SQL Editor.</span></li><li><b>3.</b><span>Copy <code>.env.example</code> to <code>.env.local</code> and set <code>NEXT_PUBLIC_SUPABASE_URL</code> and <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code>.</span></li>
+      <li><b>4.</b><span>For the separate GitHub Actions keepalive bot, <a href="https://github.com/SuprimOjha/render-keepalive/fork" target="_blank" rel="noreferrer">fork this repository</a>, then add an Actions secret named <code>RENDER_URL</code> containing your own public Render health URL.</span></li>
+      <li><b>5.</b><span>For the optional dashboard scheduler, add <code>SUPABASE_URL</code> and <code>SUPABASE_SERVICE_ROLE_KEY</code> as GitHub Actions secrets in your fork. Never expose the service-role key in frontend variables.</span></li></ol>
+    <a className="button button-primary setup-link" href="https://github.com/SuprimOjha/render-keepalive/fork">Fork repository to get started ↗</a>
   </section></main>;
   if (!session) return <main className="setup-screen"><section className="auth-card">
     <div className="brand"><span className="brand-mark">R</span><span>Render<span className="brand-light">Monitor</span></span></div><div className="eyebrow"><span className="eyebrow-dot" /> UPTIME, MADE VISIBLE</div>
