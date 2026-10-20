@@ -25,5 +25,9 @@ class PublicUrlValidationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             module.validate_public_url("http://printer.local")
 
+    def test_redirects_are_disabled(self):
+        # The scheduled worker must not automatically follow a redirect supplied by a target.
+        self.assertIsNone(module.SAFE_OPENER.handlers[0].redirect_request)
+
 if __name__ == "__main__":
     unittest.main()
