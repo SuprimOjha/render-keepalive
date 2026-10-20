@@ -1,0 +1,51 @@
+name: Render health check
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: render-health-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check out main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Run health check
+        env:
+          RENDER_URL: ${{ secrets.RENDER_URL }}
+        run: python3 scripts/check_render.py --output-dir "$RUNNER_TEMP/monitor-data"
+
+      - name: Publish monitoring data to monitor-data branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --exit-code --heads origin monitor-data >/dev/null 2>&1; then
+            git fetch origin monitor-data
+            git checkout -B monitor-data origin/monitor-data
+          else
+            git checkout --orphan monitor-data
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+
+          cp "$RUNNER_TEMP/monitor-data/status.json" ./status.json
+          cp "$RUNNER_TEMP/monitor-data/history.json" ./history.json
+          git add status.json history.json
+          git commit -m "Update Render health-check results" || echo "No changes to publish"
+          git push origin monitor-data
