@@ -4,7 +4,7 @@ import json, os, socket, time, ipaddress
 from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener\n\nclass NoRedirect(HTTPRedirectHandler):\n    """Never follow user-controlled redirects to avoid redirect-based SSRF."""\n    def redirect_request(self, req, fp, code, msg, headers, newurl):\n        return None\n\nSAFE_OPENER = build_opener(NoRedirect())
 
 API = os.environ.get("SUPABASE_URL", "").rstrip("/")
 KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
@@ -44,7 +44,7 @@ def check(url):
         safe = validate_public_url(url)
         req = Request(safe, headers={"User-Agent": "RenderMonitor/1.0", "Accept": "*/*"}, method="GET")
         try:
-            with urlopen(req, timeout=12) as response:
+            with SAFE_OPENER.open(req, timeout=12) as response:
                 status_code = response.status
                 response.read(512)
         except HTTPError as exc:
