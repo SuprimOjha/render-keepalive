@@ -36,7 +36,7 @@ jobs:
 
       - name: Run health check
         env:
-          RENDER_URL: ${{ secrets.RENDER_URL }}
+          RENDER_URL: ${{ secrets.RENDER_URL || 'https://nepal-vegetation-lag-api.onrender.com/' }}
         run: python3 scripts/check_render.py --output-dir "$RUNNER_TEMP/monitor-data"
 
       - name: Publish monitoring data to monitor-data branch
